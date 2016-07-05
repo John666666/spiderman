@@ -32,7 +32,10 @@ class Spider:
         for line in open("category_conf.txt"):
             if not line or len(line.strip()) < 1:
                 continue
-            category_list.append(line.strip())
+            if line.startswith('#'):
+                continue
+            print type(line)
+            category_list.append(line.strip().decode('utf-8'))
 
     def clearCategoryCount(self):
         self.category_count = 0
@@ -44,7 +47,21 @@ class Spider:
         self.total_count += 1
 
     def spiderCategory(self, pageCount, pageSize):
-        pass
+        start_pageNum = 0
+        if not category_list:
+            logger.error("category list is empty!")
+            return
+        for category in category_list:
+            logger.info('start fetch category %s' % category)
+            self.clearCategoryCount()
+            for pageNum in range(start_pageNum, pageCount, 1):
+                url = self.buildUrl(category, pageNum, pageSize)
+                try:
+                    ret_str = self.getPage(url).strip()
+                    json_obj = self.parseJson(ret_str)
+                    self.handleResult(json_obj, category)
+                except Exception, e:
+                    logger.error('%s: %s' % (type(e), e))
 
     def buildUrl(self, category, pageNum, pageSize):
         pass
@@ -72,7 +89,7 @@ class Spider:
                                'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.87 Safari/537.36')
             response = urllib2.urlopen(request)
         except Exception, e:
-            logger.error(e.message)
+            logger.error('%s: %s' % (type(e), e))
             return
         code = response.getcode()
         if code != 200:
@@ -95,24 +112,10 @@ class BaiduImageSpider(Spider):
 
     def spiderCategory(self, pageCount, pageSize=30):
         logger.info("start fetch Baidu image...")
-        start_pageNum = 0
-        if not category_list:
-            logger.error("category list is empty!")
-            return
-        for category in category_list:
-            logger.info('start fetch %s' % category)
-            self.clearCategoryCount()
-            for pageNum in range(start_pageNum, pageCount, 1):
-                try:
-                    url = self.buildUrl(category, pageNum, pageSize)
-                    ret_str = self.getPage(url)
-                    json_obj = self.parseJson(ret_str)
-                    self.handleResult(json_obj, category)
-                except Exception,e:
-                    logger.error(e.message)
+        Spider.spiderCategory(self, pageCount, pageSize)
 
     def buildUrl(self, category, pageNum, pageSize):
-        category = quote(category)
+        category = quote(category.encode('utf-8'))
         url = 'http://image.baidu.com/search/acjson?tn=resultjson_com&ipn=rj&ct=201326592&is=&fp=result&queryWord=%s&cl=&lm=&ie=utf-8&oe=utf-8&adpicid=&st=&z=&ic=&word=%s&s=&se=&tab=&width=&height=&face=&istype=&qc=&nc=&fr=&pn=%d&rn=%d&gsm=3c' % (
         category, category, pageNum*pageSize, pageSize)
         return url
@@ -133,7 +136,7 @@ class BaiduImageSpider(Spider):
                     fileName = pic_url[idx:]
                     image_file = self.getPage(pic_url)
                     if image_file:
-                        file_name = store_root + 'baidu/%s/%s' % (category.decode('utf-8'), fileName)
+                        file_name = store_root + 'baidu/%s/%s' % (category, fileName)
                         if not (file_name.endswith('.jpg') or file_name.endswith('.JPG') or file_name.endswith('.jpeg') or file_name.endswith('.JPEG')):
                             file_name += '.jpg'
                         if self.storeFile(image_file, file_name):
@@ -141,7 +144,7 @@ class BaiduImageSpider(Spider):
                             self.incrementTotalCount()
                             logger.info('[progress] category %s, category_count: %d, total_count: %d' % (category, self.category_count, self.total_count))
             except Exception,e:
-                logger.error(e.message)
+                logger.error('%s: %s' % (type(e), e))
 
 class SogouImageSpider(Spider):
     def __init__(self):
@@ -149,24 +152,11 @@ class SogouImageSpider(Spider):
 
     def spiderCategory(self, pageCount, pageSize = 48):
         logger.debug('start fetch Sogou Image...')
-        start_pageNum = 0
-        if not category_list:
-            logger.error("category list is empty!")
-            return
-        for category in category_list:
-            logger.info('start fetch category %s' % category)
-            self.clearCategoryCount()
-            for pageNum in range(start_pageNum, pageCount, 1):
-                url = self.buildUrl(category, pageNum, pageSize)
-                try:
-                    ret_str = self.getPage(url).strip()
-                    json_obj = self.parseJson(ret_str)
-                    self.handleResult(json_obj, category)
-                except Exception, e:
-                    logger.error(e.message)
+        Spider.spiderCategory(self, pageCount, pageSize)
+
 
     def buildUrl(self, category, pageNum, pageSize):
-        category = quote(category)
+        category = quote(category.encode('utf-8'))
         url = 'http://pic.sogou.com/pics?query=%s&mood=0&picformat=0&mode=1&di=2&start=%d&reqType=ajax&tn=0&reqFrom=result' % (
         category, pageNum * pageSize)
         return url
@@ -187,7 +177,7 @@ class SogouImageSpider(Spider):
                     fileName = pic_url[idx:]
                     image_file = self.getPage(pic_url)
                     if image_file:
-                        file_name = store_root + 'sogou/%s/%s' % (category.decode('utf-8'), fileName)
+                        file_name = store_root + 'sogou/%s/%s' % (category, fileName)
                         if not (file_name.endswith('.jpg') or file_name.endswith('.JPG') or file_name.endswith('.JPEG') or file_name.endswith('.jpeg')):
                             file_name += '.jpg'
                         if self.storeFile(image_file, file_name):
@@ -195,7 +185,50 @@ class SogouImageSpider(Spider):
                             self.incrementTotalCount()
                             logger.info('[progress] category %s, category_count: %d, total_count: %d' % (category, self.category_count, self.total_count))
                 except Exception, e:
-                    logger.error(e.message)
+                    logger.error('%s: %s' % (type(e), e))
+
+
+class SoImageSpider(Spider):
+    '''
+    360 Image Fetcher
+    '''
+    def __init__(self):
+        Spider.__init__(self)
+
+    def buildUrl(self, category, pageNum, pageSize):
+        category = quote(category.encode('utf-8'))
+        url = 'http://image.so.com/j?q=%s&src=srp&sn=%d&pn=%d' % (category, pageNum * pageSize, pageSize)
+        return url
+
+    def spiderCategory(self, pageCount, pageSize=30):
+        logger.debug('start fetch 360 Image...')
+        Spider.spiderCategory(self, pageCount, pageSize)
+
+    def handleResult(self, json_obj, category):
+        if not json_obj or not json_obj.has_key('list'):
+            return
+        for image_item in json_obj.get('list'):
+            pic_url = image_item.get('thumb')
+            if pic_url:
+                logger.debug(pic_url)
+                try:
+                    idx = 0
+                    _idx = idx = pic_url.rindex('/')
+                    if _idx != -1:
+                        idx = _idx + 1
+                    fileName = pic_url[idx:]
+                    image_file = self.getPage(pic_url)
+                    if image_file:
+                        file_name = store_root + '360/%s/%s' % (category, fileName)
+                        if not (file_name.endswith('.jpg') or file_name.endswith('.JPG') or file_name.endswith('.JPEG') or file_name.endswith('.jpeg')):
+                            file_name += '.jpg'
+                        if self.storeFile(image_file, file_name):
+                            self.incrementCategoryCount()
+                            self.incrementTotalCount()
+                            logger.info('[progress] category %s, category_count: %d, total_count: %d' % (category, self.category_count, self.total_count))
+                except Exception, e:
+                    logger.error('%s: %s' % (type(e), e))
+
 
 
 class Utils:
@@ -284,16 +317,19 @@ class Utils:
         return url.translate(cls.__transDic)
 
 if __name__ == '__main__':
+
     # start Fetch Sogou Image
     spider = SogouImageSpider()
     spider.spiderCategory(15)
+    #spider.spiderCategory(1)
 
     # start Fetch Baidu Image
     spider = BaiduImageSpider()
     spider.spiderCategory(20)
+    #spider.spiderCategory(1)
 
-    # str = '张三'
-    # print type(str)
-    # print type(str.decode('utf-8'))
-    # print type(str)
+    # start Fetch 360 Image
+    spider = SoImageSpider()
+    spider.spiderCategory(20)
+    # spider.spiderCategory(1)
 
