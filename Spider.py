@@ -34,7 +34,6 @@ class Spider:
                 continue
             if line.startswith('#'):
                 continue
-            print type(line)
             category_list.append(line.strip().decode('utf-8'))
 
     def clearCategoryCount(self):
@@ -102,7 +101,7 @@ class Spider:
     def parseJson(self, str):
         if not str:
             return None
-        str = unicode(str, errors='ignore')
+        str = str.decode('gbk',errors='ignore')
         return json.loads(str)
 
 
@@ -321,15 +320,18 @@ if __name__ == '__main__':
     # start Fetch Sogou Image
     spider = SogouImageSpider()
     spider.spiderCategory(15)
-    #spider.spiderCategory(1)
-
-    # start Fetch Baidu Image
-    spider = BaiduImageSpider()
-    spider.spiderCategory(20)
-    #spider.spiderCategory(1)
+    # spider.spiderCategory(1)
 
     # start Fetch 360 Image
     spider = SoImageSpider()
     spider.spiderCategory(20)
     # spider.spiderCategory(1)
+
+    # start Fetch Baidu Image
+    #spider = BaiduImageSpider()
+    #spider.spiderCategory(1)
+    #spider.spiderCategory(1)
+
+
+
 
