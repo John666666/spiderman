@@ -9,6 +9,7 @@ import os
 import logging
 import sys
 import time
+import threading
 
 store_root = 'F:/temp/spiderman/'
 # store_root = '/luobotec/jun.li/spiderman/files/'
@@ -320,20 +321,36 @@ class Utils:
 if __name__ == '__main__':
 
     start_time = time.time()
+
+    thread_pool = []
+
     # start Fetch Sogou Image
     spider = SogouImageSpider()
-    spider.spiderCategory(15)
+    #spider.spiderCategory(15)
     # spider.spiderCategory(1)
+    thread_pool.append(threading.Thread(name='sogou', target=spider.spiderCategory, args=[15]))
 
     # start Fetch 360 Image
     spider = SoImageSpider()
-    spider.spiderCategory(20)
+    #spider.spiderCategory(20)
     # spider.spiderCategory(1)
+    thread_pool.append(threading.Thread(name='360', target=spider.spiderCategory, args=[20]))
+
 
     # start Fetch Baidu Image
     #spider = BaiduImageSpider()
     #spider.spiderCategory(1)
     #spider.spiderCategory(1)
+
+    for t in thread_pool:
+        t.setDaemon(True)
+        t.start()
+        print '%s thread start...' % t.getName()
+
+    for t in thread_pool:
+        t.join()
+
+    print 'all thread were finished...'
 
     end_time = time.time()
     print("fetch job is finish, cost: %d s." % ((end_time - start_time)))
