@@ -6,14 +6,16 @@ from urllib import quote
 import urllib2
 import json
 import os
+import logging
+import sys
+import time
 
 store_root = 'F:/temp/spiderman/'
 # store_root = '/luobotec/jun.li/spiderman/files/'
 category_list = []
 
 
-import logging
-import sys
+
 logger = logging.getLogger()
 format = logging.Formatter('%(asctime)s - %(levelname)s [%(threadName)s] %(module)s:%(lineno)s - %(message)s')
 handler = logging.StreamHandler(sys.stdout)
@@ -317,6 +319,7 @@ class Utils:
 
 if __name__ == '__main__':
 
+    start_time = time.time()
     # start Fetch Sogou Image
     spider = SogouImageSpider()
     spider.spiderCategory(15)
@@ -332,6 +335,8 @@ if __name__ == '__main__':
     #spider.spiderCategory(1)
     #spider.spiderCategory(1)
 
+    end_time = time.time()
+    print("fetch job is finish, cost: %d s." % ((end_time - start_time)))
 
 
 
