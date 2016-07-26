@@ -47,13 +47,15 @@ class NTESMusicSpider:
                                         db='nlu_cloud', port=3306, charset='utf8')
             self.cur = self.conn.cursor()
             self.loadSpideredSongUrls()
-            self.spideredSongUrlsFile = open('E:/pythonworkspace/spider/spideredSongUrls.txt', 'a')
+            # self.spideredSongUrlsFile = open('E:/pythonworkspace/spider/spideredSongUrls.txt', 'a')
+            self.spideredSongUrlsFile = open('D:/py_workspace/spiderman/spideredSongUrls.txt', 'a')
 
         except MySQLdb.Error, e:
             logger.error('Mysql Error ' + e.args[0] + ' ' + e.args[1])
     # 从文件中读取已爬取的歌曲/专辑列表
     def loadSpideredSongUrls(self):
-        for line in open('E:/pythonworkspace/spider/spideredSongUrls.txt'):
+        # for line in open('E:/pythonworkspace/spider/spideredSongUrls.txt'):
+        for line in open('D:/py_workspace/spiderman/spideredSongUrls.txt'):
             if not line or len(line.strip()) < 1:
                 continue
             spiderSongUrl = line.strip('\n')
@@ -88,6 +90,40 @@ class NTESMusicSpider:
         end_time = time.time()
         logger.info('end to spider music.163.com signed artists , cost:')
         logger.info(end_time - start_time)
+
+    # 爬取热门歌手
+    def spiderHotArtists(self):
+        logger.info('start to spider music.163.com hot artists ...')
+        start_time = time.time()
+        web_driver = webdriver.PhantomJS()
+        web_driver.set_window_size(4800, 8000)
+        web_driver.get('http://music.163.com/#/discover/artist')
+        web_driver.switch_to.frame('contentFrame')
+        # m-sgerlist
+        artistliEles = web_driver.find_element_by_id('m-artist-box').find_elements(by=By.CSS_SELECTOR,value='li')
+        for artistLi in artistliEles:
+            artistAList = artistLi.find_elements(by=By.CSS_SELECTOR, value='a.nm-icn')
+            artistA = None
+            if artistAList and len(artistAList) > 0:
+                artistA = artistAList[0]
+            if artistA:
+                artistUrl = artistA.get_attribute('href')
+                #print artistA.get_attribute('title')
+                self.spiderArtist(artistUrl)
+
+        try:
+            self.conn.close()
+            self.cur.close()
+            self.web_driver.quit()
+            self.albums_driver.quit()
+            self.album_driver.quit()
+            self.song_driver.quit()
+            self.spideredSongUrlsFile.close()
+        except Exception, e:
+            logger.error('SpiderHotArtists close error: %s' % e)
+
+        end_time = time.time()
+        logger.info('end to spider music.163.com hot artists , cost: %d' % (end_time - start_time))
 
     # 爬取歌手信息
     def spiderArtist(self, artistUrl):
@@ -310,7 +346,8 @@ class NTESMusicSpider:
 
 if __name__ == '__main__':
     spider = NTESMusicSpider()
-    spider.spiderSignedArtists()
+    #spider.spiderSignedArtists()
+    spider.spiderHotArtists()
     # spider.spiderArtist('10559')
     # spider.spiderAlbum('/album?id=2696067')
     # spider.spiderSong('/song?id=27928265')
