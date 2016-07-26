@@ -29,11 +29,13 @@ class NTESMusicSpider:
     artists_driver = webdriver.PhantomJS()
     # 专门爬取歌手专辑列表的浏览器实例
     albums_driver = webdriver.PhantomJS()
-    # 专门爬取专辑内容的浏览器实例
+    # 专门爬取
+    # 专辑内容的浏览器实例
     album_driver = webdriver.PhantomJS()
     # 专门爬取歌曲内容的浏览器实例
     song_driver = webdriver.PhantomJS()
-
+    # 已爬取的歌曲URL
+    spideredUrls = {}
     def __init__(self):
         self.artists_driver.set_page_load_timeout(60)
         self.albums_driver.set_page_load_timeout(60)
@@ -44,8 +46,18 @@ class NTESMusicSpider:
                                         passwd='nlu_cloud123',
                                         db='nlu_cloud', port=3306, charset='utf8')
             self.cur = self.conn.cursor()
+            self.loadSpideredSongUrls()
+            self.spideredSongUrlsFile = open('E:/pythonworkspace/spider/spideredSongUrls.txt', 'a')
+
         except MySQLdb.Error, e:
             logger.error('Mysql Error ' + e.args[0] + ' ' + e.args[1])
+    # 从文件中读取已爬取的歌曲/专辑列表
+    def loadSpideredSongUrls(self):
+        for line in open('E:/pythonworkspace/spider/spideredSongUrls.txt'):
+            if not line or len(line.strip()) < 1:
+                continue
+            spiderSongUrl = line.strip('\n')
+            self.spideredUrls[spiderSongUrl] = True
 
     # 爬取签约歌手
     def spiderSignedArtists(self):
@@ -70,10 +82,12 @@ class NTESMusicSpider:
             self.albums_driver.quit()
             self.album_driver.quit()
             self.song_driver.quit()
+            self.spideredSongUrlsFile.close()
         except Exception, e:
             logger.error('Mysql Error ' + e.args[0] + ' ' + e.args[1])
         end_time = time.time()
-        logger.info('end to spider music.163.com signed artists , cost:' + (end_time - start_time))
+        logger.info('end to spider music.163.com signed artists , cost:')
+        logger.info(end_time - start_time)
 
     # 爬取歌手信息
     def spiderArtist(self, artistUrl):
@@ -89,7 +103,10 @@ class NTESMusicSpider:
             albumEles = self.albums_driver.find_elements(by=By.CSS_SELECTOR, value='#m-song-module li')
             for albumEle in albumEles:
                 albumUrl = albumEle.find_element_by_css_selector('a').get_attribute('href')
-                self.spiderAlbum(albumUrl)
+                if True == self.spideredUrls.get(albumUrl):
+                    logger.warn('album has been spidered.skip. albumUrl='+ albumUrl)
+                else:
+                    self.spiderAlbum(albumUrl)
 
             logger.info('end to spider first page albums, albumsUrl=' + albumsUrl)
             # 获取下一页的URL
@@ -186,7 +203,10 @@ class NTESMusicSpider:
             for songEle in songEles:
                 songUrl = songEle.find_element_by_css_selector('a').get_attribute(
                     'href')
-                self.spiderSong(songUrl, albumRowId)
+                if True == self.spideredUrls.get(songUrl):
+                    logger.warn('song has been spidered.skip. songUrl='+ songUrl)
+                else:
+                    self.spiderSong(songUrl, albumRowId)
 
             self.album_driver.find_element_by_css_selector('a[data-action=outchain]').click()
 
@@ -198,6 +218,9 @@ class NTESMusicSpider:
                     update_album_value)
 
             self.conn.commit()
+            # 记录当前专辑的URL到文件中
+            self.spideredSongUrlsFile.write(albumUrl + '\n')
+            self.spideredSongUrlsFile.flush()
         except Exception, e:
             logger.error('spider album error, url=%s ,error= %s: %s' % (albumUrl, type(e), e))
             logger.warn('restart to spider albumUrl. albumUrl=' + albumUrl)
@@ -243,6 +266,9 @@ class NTESMusicSpider:
 
             if songUrl == self.song_driver.current_url:
                 logger.warn('current song have not the copyright. songUrl=' + songUrl)
+                # 记录当前歌曲的URL到文件中
+                self.spideredSongUrlsFile.write(songUrl + '\n')
+                self.spideredSongUrlsFile.flush()
             else:
                 music_sel_key = [albumRowId, songName]
                 self.cur.execute(
@@ -256,7 +282,9 @@ class NTESMusicSpider:
                     self.conn.commit()
                 else:
                     logger.warn('song has exist. songUrl='+songUrl)
-
+                # 记录当前歌曲的URL到文件中
+                self.spideredSongUrlsFile.write(songUrl+'\n')
+                self.spideredSongUrlsFile.flush()
         except Exception, e:
             logger.error('spider song error, url=%s ,error= %s: %s' % (songUrl, type(e), e))
             logger.warn('restart to spider song. songUrl=' + songUrl)
