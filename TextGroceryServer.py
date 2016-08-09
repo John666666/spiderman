@@ -11,7 +11,6 @@ import threading
 import BaseHTTPServer
 import urllib
 import urlparse
-import sched
 import urllib2
 
 reload(sys)
@@ -169,7 +168,7 @@ class TextGroceryRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         output_txt = predict_result.predicted_y
         dict = predict_result.dec_values
         logger.debug('classify text=%s predicted_value=%s dec_value=%s' % (
-        input_txt, predict_result.predicted_y, dict[predict_result.predicted_y]))
+            input_txt, predict_result.predicted_y, dict[predict_result.predicted_y]))
         if dict[predict_result.predicted_y] < 0.15:
             output_txt = ''
         return output_txt
@@ -179,12 +178,16 @@ class TextGroceryRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 class Timer(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
-        self.schedule = sched.scheduler(time.time, time.sleep)
 
     def run(self):
         logger.info('start to run textGrocery train.')
-        self.schedule.enter(60 * 60 , 0, self.trainTextGrocery, ())
-        self.schedule.run()
+        while True:
+            current_time = time.localtime(time.time())
+            # 每天凌晨一点跑一次数据训练
+            if current_time.tm_hour == 1:
+                self.trainTextGrocery()
+            # 每隔半小时判断一次
+            time.sleep(60 * 30)
 
     def trainTextGrocery(self):
         try:
@@ -199,7 +202,6 @@ class Timer(threading.Thread):
                 content = ret.decode('utf-8', errors='ignore')
                 logger.info('textGrocery train result=%s' % (content))
             logger.info('end to invoke textGrocery train.')
-            self.schedule.enter(60 * 60 , 0, self.trainTextGrocery, ())
         except Exception, e:
             logger.error('textGrocery train failed. e=%s' % (e))
 
