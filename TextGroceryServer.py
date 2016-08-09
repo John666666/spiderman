@@ -11,6 +11,9 @@ import threading
 import BaseHTTPServer
 import urllib
 import urlparse
+import sched
+import urllib2
+
 reload(sys)
 sys.setdefaultencoding('utf-8')
 logger = logging.getLogger()
@@ -23,14 +26,14 @@ logger.setLevel(logging.INFO)
 # 全局变量
 grocery = Grocery('resource_a')
 
+
 # TextGrocery训练类
 class TextGroceryTrain:
-
     def __init__(self):
         pass
 
     # 查询指定表的行数并返回
-    def qryTotalRowNumByTable(self,cursor,table):
+    def qryTotalRowNumByTable(self, cursor, table):
         cursor.execute('select COUNT(1) FROM ' + table)
         row = cursor.fetchone()
         if row == None:
@@ -40,7 +43,7 @@ class TextGroceryTrain:
         return total_row_num
 
     # 加载 nlu_Knowledge 表中的数据到训练文件中
-    def loadNluKnowledge(self,cursor):
+    def loadNluKnowledge(self, cursor):
         logger.info('begin to load nlu_knowlege.')
         # 分页读取开始行号
         begin = 0
@@ -49,17 +52,17 @@ class TextGroceryTrain:
         # 读取表 nlu_knowledge 中的总行数
         total_row_num = self.qryTotalRowNumByTable(cursor, 'nlu_knowledge')
         while (begin < total_row_num):
-            cursor.execute('select title,domain FROM nlu_knowledge order by id desc limit %s,%s',(begin,page_size))
+            cursor.execute('select title,domain FROM nlu_knowledge order by id desc limit %s,%s', (begin, page_size))
             begin = begin + page_size
             datas = cursor.fetchall()
-            for title,domain in datas:
+            for title, domain in datas:
                 # 向文件中写入记录
-                self.train_data_file.write(domain+':'+title+'\n')
+                self.train_data_file.write(domain + ':' + title + '\n')
             self.train_data_file.flush()
-        logger.info('end to load nlu_knowlege. size = %d' %(total_row_num))
+        logger.info('end to load nlu_knowlege. size = %d' % (total_row_num))
 
     # 加载 nlu_poem 表中的数据到训练文件中
-    def loadNluPoem(self,cursor):
+    def loadNluPoem(self, cursor):
         logger.info('begin to load nlu_poem. ')
         # 分页读取开始行号
         begin = 0
@@ -68,16 +71,16 @@ class TextGroceryTrain:
         # 读取表 nlu_poem 中的总行数
         total_row_num = self.qryTotalRowNumByTable(cursor, 'nlu_poem')
         while (begin < total_row_num):
-            cursor.execute('select title,domain FROM nlu_poem order by id desc limit %s,%s',(begin,page_size))
+            cursor.execute('select title,domain FROM nlu_poem order by id desc limit %s,%s', (begin, page_size))
             begin = begin + page_size
             datas = cursor.fetchall()
-            for title,domain in datas:
+            for title, domain in datas:
                 # 向文件中写入记录
-                self.train_data_file.write(domain+':'+title+'\n')
+                self.train_data_file.write(domain + ':' + title + '\n')
         logger.info('end to load nlu_poem. size = %d' % (total_row_num))
 
     # 加载 media 表中的数据到训练文件中
-    def loadMedia(self,cursor):
+    def loadMedia(self, cursor):
         logger.info('begin to load media. ')
         # 分页读取开始行号
         begin = 0
@@ -86,13 +89,14 @@ class TextGroceryTrain:
         # 读取表 nlu_poem 中的总行数
         total_row_num = self.qryTotalRowNumByTable(cursor, 'media')
         while (begin < total_row_num):
-            cursor.execute('select name FROM media order by id desc limit %s,%s',(begin,page_size))
+            cursor.execute('select name FROM media order by id desc limit %s,%s', (begin, page_size))
             begin = begin + page_size
             datas = cursor.fetchall()
             for data in datas:
                 # 向文件中写入记录
-                self.train_data_file.write('media:'+data[0]+'\n')
+                self.train_data_file.write('media:' + data[0] + '\n')
         logger.info('end to load media. size = %d' % (total_row_num))
+
     # 加载训练数据
     def loadTrainData(self):
 
@@ -133,7 +137,7 @@ class TextGroceryTrain:
                 self.train_grocery_name = 'resource_a'
             logger.info('begin to train. train_grocery_name= %s' % (self.train_grocery_name))
             train_grocery = Grocery(self.train_grocery_name)
-            train_grocery.train('train_cn.txt',':')
+            train_grocery.train('train_cn.txt', ':')
             train_grocery.save()
             grocery = train_grocery
             logger.info('end to train. train_grocery_name= %s' % (self.train_grocery_name))
@@ -142,14 +146,13 @@ class TextGroceryTrain:
 
 
 class TextGroceryRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
-
     # 处理一个GET请求
     def do_GET(self):
         uri = urlparse.urlparse(self.path).path.split('/')[-1]
         if 'refresh' == uri:
             train = TextGroceryTrain()
             train.train()
-            result ='refresh success'
+            result = 'refresh success'
         else:
             result = self.classify(uri)
 
@@ -158,24 +161,60 @@ class TextGroceryRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(result)))
         self.end_headers()
         self.wfile.write(result)
+
     # 分类主方法
-    def classify(self,text):
+    def classify(self, text):
         input_txt = urllib.unquote(text)
         predict_result = grocery.predict(input_txt)
         output_txt = predict_result.predicted_y
         dict = predict_result.dec_values
-        logger.debug('classify text=%s predicted_value=%s dec_value=%s' %(input_txt,predict_result.predicted_y,dict[predict_result.predicted_y]))
+        logger.debug('classify text=%s predicted_value=%s dec_value=%s' % (
+        input_txt, predict_result.predicted_y, dict[predict_result.predicted_y]))
         if dict[predict_result.predicted_y] < 0.15:
             output_txt = ''
         return output_txt
 
+
+# 定时处理类
+class Timer(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
+        self.schedule = sched.scheduler(time.time, time.sleep)
+
+    def run(self):
+        logger.info('start to run textGrocery train.')
+        self.schedule.enter(60 * 60 , 0, self.trainTextGrocery, ())
+        self.schedule.run()
+
+    def trainTextGrocery(self):
+        try:
+            logger.info('begin to invoke textGrocery train.')
+            textGroceryTrainUrl = 'http://localhost:8187/refresh'
+            request = urllib2.Request(textGroceryTrainUrl)
+            response = urllib2.urlopen(request)
+            ret = response.read().strip()
+            if not ret:
+                logger.error('textGrocery train return failed.')
+            else:
+                content = ret.decode('utf-8', errors='ignore')
+                logger.info('textGrocery train result=%s' % (content))
+            logger.info('end to invoke textGrocery train.')
+            self.schedule.enter(60 * 60 , 0, self.trainTextGrocery, ())
+        except Exception, e:
+            logger.error('textGrocery train failed. e=%s' % (e))
+
+
 if __name__ == '__main__':
     try:
-        #程序启动时重新训练，默认训练resource_a
+        # 程序启动时重新训练，默认训练resource_a
         train = TextGroceryTrain()
         train.train()
+        timeThread = Timer()
+        timeThread.setDaemon(True)
+        timeThread.start()
         serverAddress = ('', 8187)
         server = BaseHTTPServer.HTTPServer(serverAddress, TextGroceryRequestHandler)
         server.serve_forever()
     except KeyboardInterrupt:
         print '^C received ,shutting down server'
+        sys.exit(-1)
