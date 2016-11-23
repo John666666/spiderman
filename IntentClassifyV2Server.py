@@ -196,9 +196,7 @@ class TextGroceryTCPRequestHandler(StreamRequestHandler):
         dict = predict_result.dec_values
         logger.debug('classify text=%s predicted_value=%s dec_value=%s' % (
             input_txt, predict_result.predicted_y, dict[predict_result.predicted_y]))
-        if dict[predict_result.predicted_y]:
-            output_txt = output_txt + '##' + dict[predict_result.predicted_y]
-        else:
+        if dict[predict_result.predicted_y] < 0.15:
             output_txt = 'None'
         return output_txt
 
