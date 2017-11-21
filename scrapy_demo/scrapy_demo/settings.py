@@ -19,7 +19,7 @@ NEWSPIDER_MODULE = 'scrapy_demo.spiders'
 #USER_AGENT = 'scrapy_demo (+http://www.yourdomain.com)'
 
 # Obey robots.txt rules
-ROBOTSTXT_OBEY = True
+ROBOTSTXT_OBEY = False
 
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
 #CONCURRENT_REQUESTS = 32
@@ -90,3 +90,17 @@ DEFAULT_REQUEST_HEADERS = {
 #HTTPCACHE_DIR = 'httpcache'
 #HTTPCACHE_IGNORE_HTTP_CODES = []
 #HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
+
+
+## variable name must be uppercase
+##mysql configuration
+MYSQL_HOST = "localhost"
+MYSQL_PORT = 3306
+MYSQL_USER = "nlu_cloud"
+MYSQL_PASSWORD = "nlu_cloud123"
+MYSQL_DB = "nlu_cloud"
+MYSQL_USE_UNICODE = True
+MYSQL_CHARSET = "utf8"
+MYSQL_AUTOCOMMIT = False
+
+
