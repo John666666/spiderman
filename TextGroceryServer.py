@@ -104,12 +104,12 @@ class TextGroceryTrain:
         self.train_data_file.truncate()
         self.train_data_file.flush()
 
-        self.nlu_cloud_conn = MySQLdb.connect(host='rdsl1xy9qgcil384wx75.mysql.rds.aliyuncs.com', user='nlu_cloud',
+        self.nlu_cloud_conn = MySQLdb.connect(host='localhost', user='nlu_cloud',
                                               passwd='nlu_cloud123',
                                               db='nlu_cloud', port=3306, charset='utf8')
         self.nlu_cloud_cur = self.nlu_cloud_conn.cursor()
 
-        self.lb2api_conn = MySQLdb.connect(host='rdsl1xy9qgcil384wx75.mysql.rds.aliyuncs.com', user='lb2api',
+        self.lb2api_conn = MySQLdb.connect(host='localhost', user='lb2api',
                                            passwd='lb2api123',
                                            db='lb2api', port=3306, charset='utf8')
         self.lb2api_cur = self.lb2api_conn.cursor()

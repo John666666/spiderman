@@ -47,7 +47,7 @@ class TextGroceryTrain:
 
     # 加载训练数据
     def loadTrainData(self):
-        self.nlu_cloud_conn = MySQLdb.connect(host='rdsl1xy9qgcil384wx75.mysql.rds.aliyuncs.com', user='nlu_cloud',
+        self.nlu_cloud_conn = MySQLdb.connect(host='localhost', user='nlu_cloud',
                                               passwd='nlu_cloud123',
                                               db='nlu_cloud', port=3306, charset='utf8')
         self.nlu_cloud_cur = self.nlu_cloud_conn.cursor()

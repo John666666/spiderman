@@ -42,7 +42,7 @@ class NTESMusicSpider:
         self.album_driver.set_page_load_timeout(60)
         self.song_driver.set_page_load_timeout(60)
         try:
-            self.conn = MySQLdb.connect(host='rdsl1xy9qgcil384wx75.mysql.rds.aliyuncs.com', user='nlu_cloud',
+            self.conn = MySQLdb.connect(host='localhost', user='nlu_cloud',
                                         passwd='nlu_cloud123',
                                         db='nlu_cloud', port=3306, charset='utf8')
             self.cur = self.conn.cursor()

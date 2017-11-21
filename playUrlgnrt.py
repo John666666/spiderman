@@ -10,7 +10,7 @@ reload(sys)
 sys.setdefaultencoding('utf-8')
 
 try:
-    conn = MySQLdb.connect(host='rdsl1xy9qgcil384wx75.mysql.rds.aliyuncs.com', user='nlu_cloud', passwd='nlu_cloud123',
+    conn = MySQLdb.connect(host='localhost', user='nlu_cloud', passwd='nlu_cloud123',
                            db='nlu_cloud', port=3306, charset='utf8')
     cur = conn.cursor()
     cur.execute('select id,play_html from nlu_music WHERE play_url is null')
