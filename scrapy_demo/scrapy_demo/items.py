@@ -28,8 +28,5 @@ class ChengyuItem(scrapy.Item):
     createtime = scrapy.Field()
 
     def to_string(self):
-        map = {}
-        for key in self.keys():
-            map[key] = self.get(key)
-        return json.dumps(map, ensure_ascii=False)
+        return json.dumps(dict(self), ensure_ascii=False)
 

@@ -55,7 +55,6 @@ class ChengyuSpider(scrapy.Spider):
         if chengyu_list is not None:
             for chengyu in chengyu_list:
                 yield response.follow(chengyu.xpath("@href").extract_first(), callback=self.parse_detail)
-
         last_a = response.css("div.gclear.pp.bt.center.f14 a:last-child")
         text = last_a.css("::text").extract_first()
         if text is not None:
@@ -63,7 +62,6 @@ class ChengyuSpider(scrapy.Spider):
                 yield response.follow(last_a.xpath("@href").extract_first(), callback=self.parse)
             else:
                 self.log.debug("Already last page")
-
 
     # 解析详情页
     def parse_detail(self, response):
@@ -134,6 +132,7 @@ class ChengyuSpider(scrapy.Spider):
         :param item: 成语Item
         :return:
         '''
+        # self.log.info("item: %s" % item.to_string())
         char_length = item.get("char_length")
         global count
         global result
