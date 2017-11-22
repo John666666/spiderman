@@ -9,8 +9,10 @@ import time
 import scrapy
 from scrapy.http import Request
 import pinyin
+import sys
 
 from ..items import ChengyuItem
+from scrapy.utils.log import configure_logging
 
 count = 0
 result = {}
@@ -22,31 +24,39 @@ class ChengyuSpider(scrapy.Spider):
     custom_settings = {
         "ITEM_PIPELINES": {
             'scrapy_demo.pipelines.ChengyuItemPipeline': 400
-        }
+        },
+        "FEED_FORMAT": "csv"
     }
+
+    logger = logging.getLogger(name)
 
     def __init__(self):
         self.init_log()
 
     def init_log(self):
-        self.log = logging.getLogger(self.name)
-        my_format = logging.Formatter("%(asctime)-15s %(levelname)s %(filename)s %(lineno)s %(process)s %(message)s")
 
+        ##改变scrapy默认log选项
+        configure_logging(settings={
+            "LOG_LEVEL": "ERROR"
+        })
+
+        ## 设置自定义logger
+        my_format = logging.Formatter("%(asctime)-15s %(levelname)s %(filename)s %(lineno)s %(process)s %(message)s")
         fileHandler = logging.FileHandler("%s_spider.log" % self.name, encoding="utf-8")
         fileHandler.setLevel(logging.INFO)
         fileHandler.setFormatter(my_format)
-        self.log.addHandler(fileHandler)
+        self.logger.addHandler(fileHandler)
 
-        console = logging.StreamHandler()
+        console = logging.StreamHandler(sys.stdout)
         console.setLevel(logging.INFO)
         console.setFormatter(my_format)
-        self.log.addHandler(console)
+        self.logger.addHandler(console)
 
     def start_requests(self):
         url_pattern = "https://chengyu.911cha.com/zishu_%d.html"
         for i in range(3, 13):
             url = url_pattern % i
-            self.log.info("start url: "+url)
+            self.logger.info("start url: "+url)
             yield Request(url)
 
     # 解析成语列表
@@ -68,7 +78,7 @@ class ChengyuSpider(scrapy.Spider):
         chengyuItem = ChengyuItem()
         #成语内容
         chengyuItem['content'] = response.css("div.panel div.mcon h2::text").extract_first()
-        self.log.info("%s" % chengyuItem.get("content"))
+        self.logger.info("%s" % chengyuItem.get("content"))
         p_list = response.css("div.panel div.mcon.bt.noi.f14 p")
         if p_list is not None:
             for p_ele in p_list:
@@ -132,7 +142,7 @@ class ChengyuSpider(scrapy.Spider):
         :param item: 成语Item
         :return:
         '''
-        # self.log.info("item: %s" % item.to_string())
+        # self.logger.info("item: %s" % item.to_string())
         char_length = item.get("char_length")
         global count
         global result

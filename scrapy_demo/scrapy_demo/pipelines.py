@@ -69,7 +69,7 @@ class ChengyuItemPipeline(object):
                                     item.get("level"), item.get("createtime")])
                 self.conn.commit()
             except Exception, e:
-                spider.logger.error("store data into mysql error: %s" % (e.args))
+                spider.my_logger.error("store data into mysql error: %s" % (e.args))
                 self.conn.rollback()
         return item
 
@@ -98,7 +98,7 @@ class ChengyuItemPipeline(object):
         report_list, count = spider.reportCollect()
 
         #输出统计日志
-        spider.log.info(u"爬取结束, 共计爬取成语%d条, 耗时: %d 秒." % (count, self.end - self.begin))
+        spider.my_logger.info(u"爬取结束, 共计爬取成语%d条, 耗时: %d 秒." % (count, self.end - self.begin))
         for report in report_list:
-            spider.log.info(u"%s: %d个" % (report[0], report[1]))
+            spider.my_logger.info(u"%s: %d个" % (report[0], report[1]))
 
