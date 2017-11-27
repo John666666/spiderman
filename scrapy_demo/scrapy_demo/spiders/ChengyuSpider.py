@@ -8,7 +8,7 @@ import time
 
 import scrapy
 from scrapy.http import Request
-import pinyin
+from pypinyin import pinyin, Style
 import sys
 
 from ..items import ChengyuItem
@@ -17,6 +17,23 @@ from scrapy.utils.log import configure_logging
 count = 0
 result = {}
 
+
+def is_number(s):
+    try:
+        float(s)
+        return True
+    except ValueError:
+        pass
+
+    try:
+        import unicodedata
+        unicodedata.numeric(s)
+        return True
+    except (TypeError, ValueError):
+        pass
+
+    return False
+
 class ChengyuSpider(scrapy.Spider):
 
     name = "chengyu"
@@ -24,8 +41,7 @@ class ChengyuSpider(scrapy.Spider):
     custom_settings = {
         "ITEM_PIPELINES": {
             'scrapy_demo.pipelines.ChengyuItemPipeline': 400
-        },
-        "FEED_FORMAT": "csv"
+        }
     }
 
     logger = logging.getLogger(name)
@@ -77,7 +93,8 @@ class ChengyuSpider(scrapy.Spider):
     def parse_detail(self, response):
         chengyuItem = ChengyuItem()
         #成语内容
-        chengyuItem['content'] = response.css("div.panel div.mcon h2::text").extract_first()
+        content = response.css("div.panel div.mcon h2::text").extract_first()
+        chengyuItem['content'] = content.lstrip().rstrip()
         self.logger.info("%s" % chengyuItem.get("content"))
         p_list = response.css("div.panel div.mcon.bt.noi.f14 p")
         if p_list is not None:
@@ -117,15 +134,23 @@ class ChengyuSpider(scrapy.Spider):
             #成语字数
             chengyuItem['char_length'] = len(format_content)
 
-            #首字拼音
-            first_pinyin = pinyin.get(format_content[0], format="numerical")
-            chengyuItem['first_pinyin'] = first_pinyin[:-1]
-            chengyuItem['first_pinyin_tone'] = first_pinyin[-1]
+            pinyin_full = pinyin(content, style=Style.TONE3)
+            if pinyin_full is not None and len(pinyin_full) > 0:
+                #首字拼音
+                chengyuItem["first_pinyin"] = pinyin_full[0][0][:-1]
+                chengyuItem["first_pinyin_tone"] = pinyin_full[0][0][-1]
+                if not is_number(chengyuItem["first_pinyin_tone"]):
+                    # 轻声
+                    chengyuItem["first_pinyin"] = pinyin_full[0][0]
+                    chengyuItem["first_pinyin_tone"] = "0"
 
-            #末字拼音
-            last_pinyin = pinyin.get(format_content[-1], format="numerical")
-            chengyuItem['last_pinyin'] = last_pinyin[:-1]
-            chengyuItem['last_pinyin_tone'] = last_pinyin[-1]
+                #末字拼音
+                chengyuItem["last_pinyin"] = pinyin_full[-1][0][:-1]
+                chengyuItem["last_pinyin_tone"] = pinyin_full[-1][0][-1]
+                if not is_number(chengyuItem["last_pinyin_tone"]):
+                    # 轻声
+                    chengyuItem["last_pinyin"] = pinyin_full[-1][0]
+                    chengyuItem["last_pinyin_tone"] = "0"
 
             #当前时间
             chengyuItem['createtime'] = time.strftime('%Y-%m-%d %H:%M:%S')
@@ -154,6 +179,8 @@ class ChengyuSpider(scrapy.Spider):
             result[key] = 1
 
     def reportCollect(self):
+        global result
+        global count
         report_list = sorted(result.items(), cmp=lambda x, y: {cmp(x[1], y[1])}, reverse=True)
         return report_list, count
 
