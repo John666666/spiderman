@@ -40,7 +40,11 @@ class ChengyuSpider(scrapy.Spider):
 
     custom_settings = {
         "ITEM_PIPELINES": {
-            'scrapy_demo.pipelines.ChengyuItemPipeline': 400
+            #'scrapy_demo.pipelines.ChengyuItemPipeline': 400
+        },
+        "SPIDER_MIDDLEWARES" : {
+            'scrapy_demo.middlewares.JavaScriptMiddleware': 543,
+            'scrapy.downloadermiddlewares.useragent.UserAgentMiddleware': None, #禁止内置的中间件
         }
     }
 
@@ -56,6 +60,8 @@ class ChengyuSpider(scrapy.Spider):
             "LOG_LEVEL": "ERROR"
         })
 
+        self.logger.setLevel(logging.DEBUG)
+
         ## 设置自定义logger
         my_format = logging.Formatter("%(asctime)-15s %(levelname)s %(filename)s %(lineno)s %(process)s %(message)s")
         fileHandler = logging.FileHandler("%s_spider.log" % self.name, encoding="utf-8")
@@ -64,16 +70,23 @@ class ChengyuSpider(scrapy.Spider):
         self.logger.addHandler(fileHandler)
 
         console = logging.StreamHandler(sys.stdout)
-        console.setLevel(logging.INFO)
+        console.setLevel(logging.DEBUG)
         console.setFormatter(my_format)
         self.logger.addHandler(console)
 
     def start_requests(self):
-        url_pattern = "https://chengyu.911cha.com/zishu_%d.html"
-        for i in range(3, 13):
-            url = url_pattern % i
-            self.logger.info("start url: "+url)
-            yield Request(url)
+
+        # 911查询
+        # url_pattern = "https://chengyu.911cha.com/zishu_%d.html"
+        # for i in range(3, 13):
+        #     url = url_pattern % i
+        #     self.logger.info("start url: "+url)
+        #     yield Request(url, callback=self.parse)
+
+        # 汉辞网
+        url = "http://www.hydcd.com/cy/chengyu/cy.htm"
+        yield Request(url, callback=self.parse2)
+
 
     # 解析成语列表
     def parse(self, response):
@@ -87,7 +100,40 @@ class ChengyuSpider(scrapy.Spider):
             if text.encode("utf-8") == '下一页':
                 yield response.follow(last_a.xpath("@href").extract_first(), callback=self.parse)
             else:
-                self.log.debug("Already last page")
+                self.logger.debug("Already last page")
+
+    # 解析最http://www.hydcd.com在线成语最外围目录结构
+    def parse2(self, response):
+        chengyu_cells = response.css("#table1 tr td")
+        if chengyu_cells is not None:
+            for chengyu_cell in chengyu_cells:
+                href = chengyu_cell.xpath("li/a/@href").extract_first()
+                self.logger.debug("href: %s" % href)
+                if href is not None:
+                    yield response.follow(href, callback=self.parse_list2)
+        else:
+            self.logger.warning(u"无数据, 请检查Selector是否有误!")
+
+
+    # 解析最http://www.hydcd.com在线成语中层成语列表
+    def parse_list2(self, response):
+        chengyu_cells = response.css("#table1 tr td")
+        if chengyu_cells is not None:
+            for chengyu_cell in chengyu_cells:
+                href = chengyu_cell.xpath("li/a/@href").extract_first()
+                self.logger.debug("href: %s" % href)
+                if href is not None:
+                    yield response.follow(href, callback=self.parse_detail2)
+        else:
+            self.logger.warning(u"无数据, 请检查Selector是否有误!")
+
+    # 解析http://www.hydcd.com在线成语详情
+    def parse_detail2(self, response):
+        self.logger.info("parse_detail2")
+        self.logger.info("body: %s" % response.body)
+        detail_block = response.xpath("//*[@id=\"__01\"]/tbody/tr[3]/td/div[1]/table[2]/tbody/tr[1]/td[1]/div/font[3]")
+        chengyu = detail_block.xpath("text()").extract_first()
+        self.logger.info("chengyu: %s" % chengyu)
 
     # 解析详情页
     def parse_detail(self, response):
