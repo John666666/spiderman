@@ -12,7 +12,7 @@ import threading
 client_id = "OWI5M2UwMGUtZTFiZS0xMWU1LTkyM2YtMDAxNjNlMDAyMGFk"
 client_secret = "ZTdiOTNhMTItNTQzMy0zNDY0LThhZDQtMzUxNjU0M2UxMzEz"
 
-token = "NTVhYmZjYTMtYjFjMS00MTRmLTkxODUtNzJhOWQ3YmQxMDM3"
+token = "ZTY2NmU3M2MtYThiOC00ZDIzLTlkMjUtNDBkOWM1Y2VlNTE0"
 
 root_url = "http://api.open.qingting.fm"
 
@@ -21,10 +21,16 @@ format = logging.Formatter('%(asctime)s - %(levelname)s [%(threadName)s] %(modul
 handler = logging.StreamHandler(sys.stdout)
 handler.setFormatter(format)
 logger.addHandler(handler)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
+
+# import MySQLdb
 
 class QingTing:
     def __init__(self):
+        #self.conn = MySQLdb.connect(host='localhost', user='nlu_cloud',
+        #                            passwd='nlu_cloud123',
+        #                            db='nlu_cloud', port=3306, charset='utf8')
+        #self.cur = self.conn.cursor()
         pass
 
     def refreshToken(self):
@@ -85,4 +91,4 @@ if __name__ == '__main__':
     # qtfm.getOnDemandCategoryAttrs(3251)
     # qtfm.getOnDemandChannels(3251, attrIds=[1508, ])
     # qtfm.getOnDemandChannelPrograms(100706)
-    qtfm.getOnDemandPlayUrl(100706, 8082659)
+    qtfm.getOnDemandPlayUrl(83664, 342464)
